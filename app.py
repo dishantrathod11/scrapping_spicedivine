@@ -91,16 +91,24 @@ def insert_into_postgres(df):
 # KEYWORDS
 # =========================
 
-keywords = [
-    "seed", "powder", "whole", "leaves", "salt", "Cardamom Black", "Citric Acid",
-    "chilli", "Cinnamon Flat", "Round", "dal", "Fennel", "Nigella", "panchpuran",
-    "Paprika", "methi", "beans", "Chori", "Val", "Vatana", "Horse Gram", "chana",
-    "Moth", "Khichadi", "rice", "Masoori", "Sella", "Sago", "flour", "Mamra",
-    "Chora", "Coconut Shredded", "fryums", "corn", "jaggery", "Ladu Besan (Mota)",
-    "pickle", "Poha", "Mishri", "Makhana", "Sooji", "Soyabean", "Phool", "sugar",
-    "Puffs", "Oregano", "Harde", "Goond", "Khmeer", "Mulethi", "Guggul", "Triphala",
-    "Chironji"
-]
+keywords = ["Ajwain seed", "Amchur Powder", "Anardana Powder", "Anardana Whole", "Tukmaria", "Bay Leaves", "Black Pepper Powder", 
+            "Black Pepper Whole", "Black Salt", "Cardamom Black", "Cardamom Powder", "Cardamom Whole", "Citric Acid", "Chilli Powder Kashmiri", 
+            "Chilli Powder", "Chilli Powder Extra Hot", "Chilli Whole Kashmiri", "Chilli Whole", "Chilli Round", "Chilli Crushed", "Cinnamon", "Cinnamon Powder", 
+            "Cinnamon Sticks Round", "Clove Powder", "Clove Whole", "Coriander Powder", "Coriander seed", "Cumin Powder", "Cumin seed", "Coriander Cumin Powder", 
+            "Curry Powder", "Dhana Dal", "Fennel LAKHNAVI", "Fennel Powder", "Fennel seed", "Fenugreek Powder", "Fenugreek seed", "Flax seed", "Garam Masala Powder", 
+            "Garam Masala Whole", "Garlic Powder", "Ginger Powder", "Javantri Powder", "Javantri Whole", "Shah Jeera", "Kalonji", "Mustard seed", "Jaiphal Whole", "Jaiphal Powder", 
+            "Panchpuran", "Paprika", "Poppy seed", "Sesame seed Black", "Sesame seed", "Sesame seed White", "Turmeric Powder", "Turmeric Whole", 
+            "White Pepper Powder", "White Pepper Whole", "Mint Leaves", "Kasoori Methi", "Black Beans", "Black Eye Beans", "Brown Chori", "Chana Dal", 
+            "Rajma Chitra", "Desi Val", "Vatana Green", "Vatana white", "Horse Gram", "Kabuli chana", "Desi chana", "Rajma Kashmiri", "Rajma Red", "Masoor Dal", 
+            "Masoor Whole", "Moong Dal", "Moong Dal Yellow", "Moong Whole Desi", "Moong Whole", "Moth", "Red Chori", "Toor Dal", "Toor Whole", "Urad Dal", "Urad Whole", 
+            "Chana Mosambi", "Khichdi Mix", "Basmati Rice Rozana", "Brown Sona Masoori", "Diabetic Rice", "Long Grain Basmati Rice", "Sella Parboiled Basmati Rice", 
+            "Sona Masoori Rice", "Classic Basmati Rice", "Golden Sella", "Ponni Boiled Rice", "Basmati Long Premium Rice", "Basmati Super Rice", "Sabudana", "Bajri Flour", 
+            "Bajri Mamra", "Besan Flour", "Bhakhri Flour", "Whole Wheat Atta", "Whole Wheat Premium Atta", "Chilli Flakes", "Chilli Powder Resham Patti", "Chora", 
+            "Coconut Shredded Thin", "Corn Fryums", "Corn Poha", "Dhokla Flour", "Fada", "Handva Flour", "Jaggery Cube", "Jaggery Powder", "Jaggery Slab", 
+            "Jowar Flour", "Juwar Mamra", "Ladu Besan", "Methi Kuriya", "Mini Spiral Fryums", "Mini Wavy Fryums", "Mustard seed Small", "Pickle Masala", "Pickle Masala Golkry", 
+            "Poha Nylon", "Poha Thick", "Ragi Mamra", "Ragi Panipuri Fryums", "Rice Flour", "Sakar", "Sweet Makhana", "Sooji", "Soyabean", "Stone Flower", "Sugar", "Wheat Puffs", 
+            "Long Basmati Rice", "Cardamom seed", "Oregano", "Harde", "Jamun Powder", "Corn Starch", "Baking Powder", "Char Goond Powder", "Khmeer", "Chandan Powder", 
+            "Mulethi Powder", "Guggul", "Triphala Whole", "Charoli"]
 
 # =========================
 # HELPERS
@@ -138,11 +146,13 @@ def extract_unit_and_clean_name(product_name):
 
     return clean_name, unit
 
-def match_first_keyword(product_name):
-    for keyword in keywords:
-        if keyword.lower() in product_name.lower():
-            return keyword
-    return "Uncategorized"
+def keyword_match(product_name, keyword):
+    """
+    Returns True if ALL words from keyword exist in product_name (case-insensitive)
+    """
+    product_name = product_name.lower()
+    keyword_words = keyword.lower().split()
+    return all(word in product_name for word in keyword_words)
 
 # =========================
 # SCRAPER
@@ -221,9 +231,18 @@ def scrape_spicedivine():
                 clean_name, _ = extract_unit_and_clean_name(full_name)
 
                 # Match first keyword
-                matched_keyword = match_first_keyword(clean_name)
+                # Check against each keyword like Swadesh
+                matched_keyword = None
 
-                # Append product
+                for keyword in keywords:
+                    if keyword_match(clean_name, keyword):
+                        matched_keyword = keyword
+                        break
+
+                # If no keyword matched, skip product
+                if not matched_keyword:
+                    continue
+
                 products_data.append({
                     "Store": "Spice Divine",
                     "Keyword": matched_keyword,
@@ -254,7 +273,7 @@ def main():
 
         print(f"\n📊 Before Cleaning: {len(df)} rows")
 
-        df = df[df["Keyword"] != "Uncategorized"]
+        #df = df[df["Keyword"] != "Uncategorized"]
         df = df[df["Unit Size"].notna()]
         df = df[df["Unit Size"].str.strip() != ""]
 
